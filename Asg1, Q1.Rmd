@@ -1,0 +1,88 @@
+---
+title: "Asg1, Q2"
+subtitle: "Yun Kyaw, 20177325"
+output: pdf_document
+date: "2023-02-03"
+---
+```{r setup, include=FALSE}
+library(readr)
+test_Q1 <- read_csv("test_Q1A1.csv")
+train_Q1 <- read_csv("train_Q1A1.csv")
+library(dplyr)
+```
+
+``` {r, include = FALSE}
+# creating a vector for h
+h = c(0.01,0.03,0.05,0.07,0.09,0.11)
+```
+
+```{r, include = FALSE}
+f_hat <- function(X, Y, test_x, h){
+  n = 300
+  m = 400
+  
+  pred_res = rep(0,m)  # storing the predicted values
+  
+  for(j in 1:m){  # iterating through test_x
+    
+    tilde_x = test_x[j]  # making prediction at tilde_x
+    
+    tmp_denominator = 0
+    tmp_numerator = 0
+    
+    itr = 0
+    for(i in 1:n){
+      tmp_numerator = tmp_numerator + Y[i]*I(abs(tilde_x - X[i]) <= h)
+      tmp_denominator = tmp_denominator + I(abs(tilde_x - X[i]) <= h)
+      
+      if (0 %in% tmp_denominator){  # determining Yi if the denominator = 0
+        itr = itr + Y[i]
+      }
+    }
+    
+    if (itr != 0) {  # if the denominator is 0, the predicted residual = the mean of Yi
+      pred_res[j] = 1/n * itr
+    }
+    else {
+      pred_res[j] = tmp_numerator/tmp_denominator
+    } 
+  }
+  return(pred_res)
+}
+```
+
+``` {r}
+pred_res = f_hat(x, y, test_x, h)
+```
+
+```{r, warning=FALSE}
+# writing a function determine the mean square testing error given the different h values
+meanSqError = function(x, y, test_x, test_y, h) {
+  n = 300
+  m = 400
+  
+  tilda_y = test_y
+  
+  train_mse = rep(0, length(h))  # creating a vector for the train mse given h
+  test_mse = rep(0, length(h))  # creating a vector for the test mse given h
+  
+  for (k in 1:length(h)) {
+    train_error = 0
+    test_error = 0
+    
+    h = h[1:k]  # changing the value of h to iterate through the different values
+    
+    train_mse[k] = mean((y - f_hat(x, y, test_x, h))^2)
+    test_mse[k] = mean((tilda_y - f_hat(x, y, test_x, h))^2)
+  }
+  mse_df = data.frame(train_mse, test_mse)
+  
+  return(mse_df)
+}
+```
+
+```{r, warning=FALSE}
+mse = meanSqError(train_Q1$x, train_Q1$y, test_Q1$test_x, test_Q1$test_y, h)
+print(mse)
+```
+Thus, we find that the h values do not affect the mse value for the train or test data.
