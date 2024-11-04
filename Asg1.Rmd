@@ -1,0 +1,80 @@
+---
+title: "STAT 457, Asg 1, Question 1"
+subtitle: "Yun Kyaw, 20177325"
+output: pdf_document
+date: "2023-01-13"
+---
+```{r setup, include=FALSE}
+library(readr)
+test_Q1 <- read_csv("Desktop/STAT/STAT 457/test_Q1A1.csv")
+train_Q1 <- read_csv("Desktop/STAT/STAT 457/train_Q1A1.csv")
+library(dplyr)
+```
+### Q1. For each h∈{0.01,0.03,0.05,0.07,0.09,0.11} report the training and testing mean square error. Discuss the trend of training error as h increases, and also report the value of h that has the smallest testing error.
+``` {r}
+# creating a vector for h
+h = c(0.01,0.03,0.05,0.07,0.09,0.11)
+
+```
+
+```{r}
+# writing the function of f_hat
+f_hat = function(x, y, test_x, h) {
+  n = length(x)
+  m = length(test_x)
+  
+  pred_res = rep(0, m)
+  
+  for (j in 1:m) {
+    tilda_x = test_x[j]
+    
+    temp_denom = 0
+    temp_num = 0
+    
+    for (i in 1:n) {
+      temp_num = temp_num + y[i]*I(tilda_x - abs(x[i]) <= h)
+      temp_denom = temp_denom + I(tilda_x - abs(x[i]) <= h)
+    }
+    pred_res[j] = temp_num / temp_denom
+  }
+  return(pred_res)
+}
+```
+
+```{r}
+pred_res = f_hat(train_Q1$x, train_Q1$y, test_Q1$test_x, h)
+```
+
+```{r}
+# writing a function determine the mean square testing error given the different h values
+meanSqError = function(pred_res, test_y, x, test_x) {
+  n = length(x)
+  m = length(test_x)
+  
+  tilda_y = test_y
+  
+  train_error = 0
+  test_error = 0
+  
+  for (l in 1:n) {
+    train_error = train_error + (y[l] - pred_res[l])
+  }
+  
+  for (j in 1:m) {
+    test_error = test_error + (tilda_y[j] - pred_res[j])
+  }
+  
+  train_mse = 1/n * train_error
+  test_mse = 1/m * test_error
+  mse_df = data.frame(train_mse, test_mse)
+  
+  return(mse_df)
+}
+```
+
+``` {r}
+mse = meanSqError(pred_res, test_Q1$test_y, train_Q1$x, test_Q1$test_x)
+print(mse)
+```
+
+Thus, we find that the mean squared error is smaller in the __ subset.
