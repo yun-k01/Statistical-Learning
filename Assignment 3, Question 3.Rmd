@@ -1,0 +1,95 @@
+---
+title: "Assignment 3, Question 3"
+subtitle: "Yun Kyaw, 20177325"
+output: pdf_document
+date: "2023-03-10"
+---
+
+```{r setup, include=FALSE}
+library(readr)
+library(splines)
+Q4A3_train <- read_csv("Q4A3_train.csv")
+Q4A3_test <- read_csv("Q4A3_test.csv")
+attach(Q4A3_test)
+```
+
+### A) Explain how to solve the optimization problem by defining a proper design matrix and then using the linear regression procedure.
+
+```{r}
+# making design matrix
+intercept = rep(1, 500)
+design_matrix = data.frame(intercept, Q4A3_train$x)
+```
+Using the linear regression procedure,find the linear regression of x and y to determine the values of $\hat{\beta}_0$ ($\alpha$) and $\hat{\beta}_1$ ($\beta$) at each input that minimize the prediction error. Then, we may run the function of g(x) and find the optimized values.
+
+### B) Implement the procedure in (a) and visualize the prediction rule g\_{$\hat{\alpha}$, $\hat{\beta}$} with *d* = 8. Specifically, create a dense grid on [-1,1] and plot the predicted values against this grid as a curve. Further, in the same figure, plot the training data as circles.
+
+```{r}
+myfit1 = lm(Q4A3_train$y~Q4A3_train$x)
+g_x = function(x, alpha = summary(myfit1)$coef[1], beta = summary(myfit1)$coef[2], d) {
+  n = 500
+  g_hat = rep(0, d)
+  for (i in 1:n) {
+    for (j in 1:d) {
+      g_hat[j] = alpha * sin(x[j]) + beta * cos(x[j])
+    }
+  }
+  return(g_hat)
+}
+g_ab1 = g_x(x = Q4A3_train$x, d = 8)
+```
+
+```{r warning=FALSE}
+plot(Q4A3_train$x, Q4A3_train$y, pch = 19, ylab = "y", xlab = "x", col = "gray")
+```
+
+### C) Implement cross-validation approach for selecting the value of *d*. Specifically, you will implement the 10-fold-cross-validation, and the candidate values for *d* are {1, 2, ..., 20}. Report the average cross-validation mean square error for each candidate value, and the value for *d* that has the smallest cross-validation error.
+
+```{r, warning = FALSE}
+alld = c(1:20)
+nfold = 10
+errorMatrix = matrix(NA, length(alld), nfold)
+
+for (l in 1:nfold)
+{
+  for (k in 1:length(alld))
+  {
+    pred_x = g_x(x = Q4A3_train$x, d = k)
+    errorMatrix[k, l] = mean((pred_x - Q4A3_train$x)^2)
+  }
+}
+
+alld[which.min(apply(errorMatrix, 1, mean))]
+```
+
+Thus, we find that d=8 has the smallest cross validation error
+
+### D) Report the mean square error on the test dataset for the following values of *d*: {1, 2, ..., 20}.
+
+```{r, warning=FALSE}
+myfit2 = lm(test_y ~ test_x)
+g_hat = function(x, alpha = summary(myfit2)$coef[1], beta = summary(myfit2)$coef[2], d) {
+  m = 400
+  g_hat = rep(0, d)
+  for (k in 1:m) {
+    for (j in 1:d) {
+      g_hat[j] = alpha * sin(x[j]) + beta * cos(x[j])
+    }
+  }
+  return(g_hat)
+}
+g_ab2 = g_hat(test_x, d = 20)
+```
+
+```{r}
+mse = rep(0, 20)
+for (j in 1:20) {
+  mse[j] = mean(sum(g_ab2[j] - test_x)^2) 
+}
+```
+
+Thus, we find the mse for the dataset for the values of d = 1:20 is
+
+```{r}
+mse
+```

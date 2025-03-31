@@ -1,0 +1,65 @@
+---
+title: "Assignment 3, Question 1"
+subtitle: "Yun Kyaw, 20177325"
+output: pdf_document
+date: "2023-03-10"
+---
+
+```{r setup, include=FALSE}
+library(readr)
+library(glmnet)
+Q1A3_X <- read_csv("Q1A3_X.csv")
+Q1A3_Y <- read_csv("Q1A3_Y.csv")
+```
+
+### B)  Write your own coordinate descent algorithm to find the elastic net solution with $\lambda = 0.1, \alpha = 0.6$
+
+```{r}
+# creating the soft threshold function
+soft_threshod <- function(u, lambda){
+  #Input: scalar u, positive scalar lambda
+  #Output: if |u| <= lambda, output 0; if u > lambda, output u-lambda; 
+  #if u < -lambda, output u + lambda
+  
+  return(sign(u) * max(0, abs(u) - lambda))
+}
+
+# creating the coordinate descent algorithm
+myElasticNet <- function(X, y, lambda = 0.1, alpha = 0.6, tol = 1e-16, maxitr = 1000){
+  n = 400
+  p = 30
+  beta = rep(0, p) #initialization
+  
+  for (k in 1:maxitr) # the grand loop 
+  {
+    beta_old = beta #record the solution from previous iteration
+    
+    for (j in 1:ncol(X)) # update each beta_j in a loop 
+    {
+      r = y - X[, -j] %*% beta[-j]
+      
+      beta[j] = beta[j] = soft_threshod(t(r) %*% X[, j] / (sum(X[, j]^2) + n*lambda*(alpha)),
+                                        n*lambda*alpha / (sum(X[, j]^2) + (n*lambda*(1-alpha))))
+    }
+    
+    # check if beta changed more than the tolerance level in this iteration
+    if (sum(abs(beta - beta_old)) < tol) break;
+  }
+  return(list("itr" = k, "beta" = beta))
+}
+```
+
+```{r}
+# checking the results of beta_hat
+myfit = myElasticNet(as.matrix(Q1A3_X), Q1A3_Y)
+elasticfit = glmnet(as.matrix(Q1A3_X), as.matrix(Q1A3_Y), alpha = 0.6, lambda = 0.1, intercept = FALSE) 
+sum((myfit$beta - elasticfit$beta)^2)
+```
+Thus, we find that the elastic net solution from the coordinate descent has an error of 0.0002831649 compared to the glm solution, and our reported beta is 
+```{r, echo = FALSE}
+myfit$beta
+```
+and the glm beta is
+```{r, echo = FALSE}
+elasticfit$beta
+```

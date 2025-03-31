@@ -1,0 +1,64 @@
+---
+title: "Assignment 2, Q5"
+subtitle: "Yun Kyaw, 20177325"
+output: pdf_document
+date: "2023-02-22"
+---
+
+```{r setup, include = FALSE}
+library(readr)
+library(glmnet)
+library(tidyverse)
+Q4A2_test <- read_csv("Q4A2_test.csv")
+Q4A2_train <- read_csv("Q4A2_train.csv")
+```
+
+### A) Perform 10-fold cross-validation (CV) for the Lasso on the training data using the function "cv.glmnet", and plot the CV errors.
+
+```{r}
+# let newData be Q4A2_train with dummy variables instead of categorical columns
+# (as CV will not work with categorical varaibles)
+newData = Q4A2_train %>% 
+  mutate(dummy = 1) %>%
+  spread(key = League, value = dummy, fill = 0) %>%
+  mutate(dummy = 1) %>%
+  spread(key = Division, value = dummy, fill = 0) %>%
+  mutate(dummy = 1) %>%
+  spread(key = NewLeague, value = dummy, fill = 0)
+
+str(newData)
+
+lasso.cv.out = cv.glmnet(as.matrix(newData[,-17]), newData$Salary,
+                         lambda = exp(seq(-10, 10, length=1000)), alpha = 1)
+plot(lasso.cv.out)
+```
+
+### B) Report the model selected by Lasso with $\lambda$ chosen by the "one-standard error" rule.
+
+```{r}
+Ytest.1se = predict(lasso.cv.out, s = lasso.cv.out$lambda.1se, newx=as.matrix(newData[,-17]))
+```
+
+The model selected by Lasso with lambda chosen by the "one-standard error" rule is:
+
+```{r echo = FALSE}
+Ytest.1se
+```
+
+The mean square error is:
+
+```{r}
+mean((Ytest.1se - newData$Salary)^2)
+```
+
+### C) Report the mean square error of the Lasso on the test data with $\lambda$ chosen to be the one minimizing the average CV error.
+
+```{r}
+Ytest.min = predict(lasso.cv.out, s = lasso.cv.out$lambda.min, newx=as.matrix(newData[,-17]))
+```
+
+The mean square error is:
+
+```{r}
+mean((Ytest.min - newData$Salary)^2)
+```

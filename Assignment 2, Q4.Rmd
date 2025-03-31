@@ -1,0 +1,36 @@
+---
+title: "Assignment 2, Q4"
+subtitle: "Yun Kyaw, 20177325"
+output: pdf_document
+date: "2023-02-22"
+---
+```{r setup, include=FALSE}
+library(readr)
+Q4A2_test <- read_csv("Q4A2_test.csv")
+Q4A2_train <- read_csv("Q4A2_train.csv")
+```
+
+### A) Run the linear regression on the training data using all the covariates, and report the mean square error on the test data.
+```{r}
+myfit1 = lm(Salary ~ ., data = Q4A2_test)
+summary(myfit1)
+```
+The mean square error for the above linear regression on the test data is:
+```{r}
+mean(myfit1$residuals^2)
+```
+
+### B) Starting from the full model, use the stepwise regression with "both directions" mode and AIC criterion to do model selection. Report the selected model, that is, report the selected covariates, together with their estimated coefficient. 
+```{r}
+null = lm(Salary ~ 1, data = Q4A2_test)
+full = myfit1
+sfit = step(null, scope = list(lower = null, upper = full), direction = 'both')
+summary(sfit)
+```
+Using the stepwise regression in both directions, we find that the selected model and their estimated coefficents are Hits ($\hat{\beta}$ = 0.008837), Years ($\hat{\beta}$ = 0.092799), and Walks ($\hat{\beta}$ = 0.008360).
+
+### C) For the model selected in Part (b), report the mean square error on the test data.
+The mean square error for the previous model is:
+```{r}
+mean(sfit$residuals^2)
+```

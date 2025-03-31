@@ -1,0 +1,53 @@
+---
+title: "STAT 457, A4Q1"
+subtitle: Yun Kyaw, 20177325
+date: "2023-04-05"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+library(readr)
+library(dplyr)
+library(glmnet)
+library(doParallel)
+
+A4Q1_X <- read_csv("A4Q1_X.csv")
+A4Q1_Y <- read_csv("A4Q1_Y.csv")
+```
+
+### Consider the "biopsy" dataset from the MASS package in R; for its information, load the package and type "? biopsy" in the command line. After removing observations with missing values, the design matrix X is given is given in the file A4Q1_X.csv and the response vector Y in the file A4Q1_Y.csv . Specifically, X has n = 683 rows and 9 columns, and entries of Y take value either "benign" or "malignant".
+
+#### A) Perform PCA on X. Plot the explained variance ratio of each principal component. Find the smallest number of components such that the sum of their ratio is above 90%.
+
+```{r}
+# performing PCA
+tr_pca = prcomp(A4Q1_X)
+tr_pca
+```
+
+```{r}
+# graphing the explained variance ratio of each principal component
+par(mfrow=c(1,2))
+ex_var = tr_pca$sdev^2/sum(tr_pca$sdev^2)
+plot(ex_var, ylab = 'Explained percentage')
+plot(cumsum(ex_var), ylab = 'Cumlative')
+```
+
+```{r}
+cumsum(ex_var)
+```
+
+Thus, we find that the smallest number of components such that the sum of their ratio is above 90% is when there are 5 components.
+
+#### B) For the n observations, consider the first two principal components, and plot each observation as a circle in a 2D plane. For those observations with the response "benign", show their circles in red.
+
+```{r}
+Y = A4Q1_Y
+par(mfrow=c(1,1))
+plot(tr_pca$x[Y == "benign", 1], tr_pca$x[Y == "benign", 2],
+     col = 'red', xlim = c(-20, 7), ylim = c(-10, 15),
+     xlab ='PC 1', ylab = 'PC 2')
+points(tr_pca$x[Y == "malignant", 1], tr_pca$x[Y == "malignant", 2],col = 'blue')
+```

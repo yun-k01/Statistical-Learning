@@ -1,0 +1,59 @@
+---
+title: "Assignment 2, Q1"
+subtitle: "Yun Kyaw, 20177325"
+output: pdf_document
+date: "2023-02-22"
+---
+
+```{r setup, include=FALSE}
+library(readr)
+dat_Q1A2 <- read_csv("dat_Q1A2.csv")
+```
+
+### B) Implement the gradient algorithm to find the minimizer of the function $\phi_{M}$ and report $\hat{\beta}$ for M = 0.1, 0.3, 0.5, 0.9.
+
+```{r, eval = FALSE}
+# creating a function to calculate the gradient
+grad_fxn <- function(X, Y, delta = 0.01, epsilon = 1e-8, maxitr = 100000){
+  # initialize beta value
+  iter_beta = rep(0, ncol(X))
+  n = 300
+  p = 3
+  M = c(0.1, 0.3, 0.5, 0.9)
+  
+  # iterative update
+  for (k in 1:maxitr) {
+    for (j in 1:length(M)) {  # looking at each M
+      if (Y - (t(iter_beta) %*% X)  < -M[j]) {
+        temp_grad = -(1/n) * 2 * M[j] %*% X
+      }
+      else if (-M[j] <= Y - (t(iter_beta) %*% X)  && Y - (t(iter_beta) %*% X)  <= M[j]) {
+        temp_grad = 2 %*% (Y - (t(iter_beta) * X))
+      }
+      else {
+        temp_grad = 2 * M[j]
+      }
+      
+      #if the gradient is small enough, stop
+      if (max(abs(tmp_grad)) < epsilon){
+        break
+      }
+      
+      #gradient descent
+      iter_beta = iter_beta - delta*tmp_grad
+    }
+  }
+  if (k == maxitr){cat("maximum iteration reached\n")}
+  else{ cat("Iteration #: ", k)}  
+  
+  return(iter_beta)
+  
+}
+```
+
+
+```{r, eval = FALSE}
+X = as.matrix(dat_Q1A2[,2:4])
+Y = as.vector(dat_Q1A2$Y)
+grad_fxn(X, Y, 0.01, 1e-8, 10^4)
+```
