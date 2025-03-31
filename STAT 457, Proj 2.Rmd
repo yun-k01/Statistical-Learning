@@ -1,0 +1,160 @@
+---
+title: "STAT457, Project 2"
+subtitle: "Yun Kyaw, 20177325"
+output: pdf_document
+date: "2023-04-09"
+---
+
+```{r setup, include=FALSE}
+library(readr)
+Proj2_train <- read_csv("Proj2_train.csv")
+Proj2_test <- read_csv("Proj2_test.csv")
+```
+
+```{r}
+head(Proj2_train)
+head(Proj2_test)
+```
+
+### EDA
+```{r}
+intClass = rep(1,nrow(Proj2_train))  # 1 for low, 2 for medium, 3 for high
+intClass[Proj2_train$interest_level == 'medium'] = 2
+intClass[Proj2_train$interest_level == 'low'] = 3
+Proj2_train$interest_level = intClass
+
+EDA_Q1 <- glm(interest_level ~ ., data = Proj2_train)
+all_feat = summary(EDA_Q1)$coefficients[-1,4] < 0.05
+important_feat = names(all_feat)[all_feat == TRUE]
+
+for (feat in important_feat) {
+  print(summary(EDA_Q1)$coefficients[-1,4][feat])
+}
+```
+
+
+
+### Creating Predictors
+#### Random Forest Classification
+```{r}
+library(caret)
+library(randomForest)
+library(doParallel)
+registerDoParallel(cores=4)
+Proj2_train$interest_level = as.factor(Proj2_train$interest_level)
+```
+```{r}
+set.seed(5)
+rfModel = randomForest(interest_level ~ ., data = Proj2_train, importance = T, ntree = 1000) 
+```
+
+```{r}
+# creating the predictions
+rf.pred = predict(rfModel, newdata = Proj2_test, type = "prob")
+rf.pred = cbind(data.frame(ID = 1:nrow(Proj2_test)), rf.pred)
+rf.pred = rf.pred[,c('ID', 'high','low','medium')]
+head(rf.pred)
+
+stopImplicitCluster()
+# write.csv(rf.pred, file = 'RandomForest_Predictions1.csv', row.names = FALSE)
+```
+
+#### Logistic Regression
+```{r}
+# Converting interest rate to numerical
+intClass = rep(1,nrow(Proj2_train))  # 1 for low, 2 for medium, 3 for high
+intClass[Proj2_train$interest_level == 'medium'] = 2
+intClass[Proj2_train$interest_level == 'low'] = 3
+Proj2_train$interest_level = intClass
+
+library(doParallel) 
+library(glmnet)
+registerDoParallel(cores = 4) #4 cores. It depends on how many cores your computer has.
+```
+
+```{r}
+cvfit = cv.glmnet(as.matrix(Proj2_train[,-1]), as.matrix(Proj2_train[,1]), 
+                  nfolds = 10, family="multinomial",
+                  trace.it = 0, parallel = TRUE)
+```
+
+```{r}
+plot(cvfit)
+```
+
+```{r}
+glmnet.pred = predict(cvfit, newx =  as.matrix(Proj2_test), 
+                      s = "lambda.1se", type = "response")
+
+out.pred = as.data.frame(glmnet.pred)
+colnames(out.pred) = c('high','medium','low')
+out.pred = cbind(data.frame(ID = 1:nrow(Proj2_test)), out.pred)
+
+stopImplicitCluster()
+
+# write.csv(out.pred, file = 'LogisticRegr_Predictions2.csv', row.names = FALSE)
+```
+
+#### Boosting for Classification
+##### xgboost
+```{r}
+library(xgboost)
+registerDoParallel(cores=4)
+
+intClass = rep(0,nrow(Proj2_train))  # 0 for low, 1 for medium, 2 for high
+intClass[Proj2_train$interest_level == '2'] = 1
+intClass[Proj2_train$interest_level == '3'] = 2
+Proj2_train$interest_level = intClass
+
+set.seed(5)
+xgb.train = xgb.DMatrix(data = as.matrix(Proj2_train[,2:161]), label = as.matrix(Proj2_train[,1]))
+xgb.test = xgb.DMatrix(data = as.matrix(Proj2_test))
+# set parameters
+params = list(
+  booster = "gbtree",
+  eta = 0.1,
+  max_depth = 5,
+  objective = "multi:softprob",
+  nthread = 4,
+  num_class = 3
+)
+```
+
+```{r}
+# utilizing cross-validation to determine the optimal number of rounds
+xgb.fit1 = xgb.cv(params = params, data = xgb.train, nrounds=2000, nfold = 10, verbose = 1, early_stopping_rounds = 10)
+```
+Here, we found the optimal number of rounds to be at 2000
+```{r}
+# fit the model
+xgb.fit = xgboost(params = params, data = xgb.train, nrounds=2000, verbose = 1)
+
+xgb.pred = predict(xgb.fit, as.matrix(Proj2_test))
+
+xgb_predictions = matrix(unlist(xgb.pred), ncol = 3, byrow = TRUE)
+
+colnames(xgb_predictions) = c('high','medium','low')
+xgb_predictions = cbind(data.frame(ID = 1:nrow(Proj2_test)), xgb_predictions)
+
+stopImplicitCluster()
+# write.csv(xgb_predictions, file = 'XGB_Predictions1.csv', row.names = FALSE)
+```
+
+##### gbm
+```{r}
+library(gbm)
+library(caret)
+```
+
+```{r}
+gbm.mod = gbm(interest_level ~ ., data = Proj2_train, distribution="multinomial", n.trees=2000, cv.folds = 10)
+```
+
+```{r}
+gbm.pred = predict(gbm.mod, Proj2_test, type = 'response')
+gbm.pred = cbind(data.frame(ID = 1:nrow(Proj2_test)), gbm.pred)
+colnames(gbm.pred) = c('ID','high','low','medium')
+gbm.pred = gbm.pred[,c('ID', 'high','medium','low')]
+
+# write.csv(gbm.pred, file = 'gbm_Predictions1.csv', row.names = FALSE)
+```
